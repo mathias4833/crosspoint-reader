@@ -1,3 +1,4 @@
-[submodule "open-x4-sdk"]
-	path = open-x4-sdk
-	url = https://github.com/crosspoint-reader/community-sdk.git
+[submodule "custom-c6-sdk"]
+	path = custom-c6-sdk
+	url = https://github.com/mathias4833/community-sdk.git
+	branch = custom-c6-reader
