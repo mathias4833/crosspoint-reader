@@ -3,19 +3,33 @@
 #include <Arduino.h>
 #include <InputManager.h>
 
-// Display SPI pins (custom pins for XteinkX4, not hardware SPI defaults)
-#define EPD_SCLK 8   // SPI Clock
-#define EPD_MOSI 10  // SPI MOSI (Master Out Slave In)
-#define EPD_CS 21    // Chip Select
-#define EPD_DC 4     // Data/Command
-#define EPD_RST 5    // Reset
-#define EPD_BUSY 6   // Busy
+// Display SPI pins
+#define EPD_SCLK 6   // SPI Clock
+#define EPD_MOSI 7  // SPI MOSI (Master Out Slave In)
+#define EPD_CS 15    // Chip Select
+#define EPD_DC 5     // Data/Command
+#define EPD_RST 4    // Reset
+#define EPD_BUSY 18   // Busy
 
-#define SPI_MISO 7  // SPI MISO, shared between SD card and display (Master In Slave Out)
+#define SPI_MISO 10  // SPI MISO, shared between SD card and display (Master In Slave Out)
+#define SD_CS 11
 
-#define BAT_GPIO0 0  // Battery voltage
+// Power
+#define PWR_OFF 0
+#define PERIPH_EN 1
 
-#define UART0_RXD 20  // Used for USB connection detection
+// Buttons / status
+#define BTN_POWER_N 23
+#define BAT_CHG_N 22
+#define SD_DET_N 21
+#define BTN_LEFT_ADC 2
+#define BTN_RIGHT_ADC 3
+
+// I2C AON
+#define I2C_SDA 16
+#define I2C_SCL 17
+#define I2C_FREQ 400000
+
 
 // Xteink X3 Hardware
 #define X3_I2C_SDA 20
@@ -55,9 +69,10 @@ class HalGPIO {
  public:
   HalGPIO() = default;
 
-  // Inline device type helpers for cleaner downstream checks
-  inline bool deviceIsX3() const { return _deviceType == DeviceType::X3; }
-  inline bool deviceIsX4() const { return _deviceType == DeviceType::X4; }
+  // Keep the existing X3/X4 call sites compiling while this fork targets only
+  // the custom ESP32-C6 reader hardware.
+  inline bool deviceIsX3() const { return false; }
+  inline bool deviceIsX4() const { return true; }
 
   // Start button GPIO and setup SPI for screen and SD card
   void begin();

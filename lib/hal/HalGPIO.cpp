@@ -194,12 +194,13 @@ void HalGPIO::begin() {
   inputMgr.begin();
   SPI.begin(EPD_SCLK, SPI_MISO, EPD_MOSI, EPD_CS);
 
-  _deviceType = detectDeviceTypeWithFingerprint();
-
-  if (deviceIsX4()) {
-    pinMode(BAT_GPIO0, INPUT);
-    pinMode(UART0_RXD, INPUT);
-  }
+  _deviceType = DeviceType::X4;
+  pinMode(PWR_OFF, OUTPUT);
+  digitalWrite(PWR_OFF, LOW);
+  pinMode(PERIPH_EN, OUTPUT);
+  digitalWrite(PERIPH_EN, LOW);
+  pinMode(BAT_CHG_N, INPUT_PULLUP);
+  pinMode(SD_DET_N, INPUT_PULLUP);
 }
 
 void HalGPIO::update() {
@@ -270,37 +271,9 @@ void HalGPIO::verifyPowerButtonWakeup(uint16_t requiredDurationMs, bool shortPre
 }
 
 bool HalGPIO::isUsbConnected() const {
-  if (deviceIsX3()) {
-    // X3: infer USB/charging via BQ27220 Current() register (0x0C, signed mA).
-    // Positive current means charging.
-    for (uint8_t attempt = 0; attempt < 2; ++attempt) {
-      int16_t currentMa = 0;
-      if (X3GPIO::readBQ27220CurrentMA(&currentMa)) {
-        return currentMa > 0;
-      }
-      delay(2);
-    }
-    return false;
-  }
-  // U0RXD/GPIO20 reads HIGH when USB is connected
-  return digitalRead(UART0_RXD) == HIGH;
+  return digitalRead(BAT_CHG_N) == LOW;
 }
 
 HalGPIO::WakeupReason HalGPIO::getWakeupReason() const {
-  const auto wakeupCause = esp_sleep_get_wakeup_cause();
-  const auto resetReason = esp_reset_reason();
-
-  const bool usbConnected = isUsbConnected();
-
-  if ((wakeupCause == ESP_SLEEP_WAKEUP_UNDEFINED && resetReason == ESP_RST_POWERON && !usbConnected) ||
-      (wakeupCause == ESP_SLEEP_WAKEUP_GPIO && resetReason == ESP_RST_DEEPSLEEP && usbConnected)) {
-    return WakeupReason::PowerButton;
-  }
-  if (wakeupCause == ESP_SLEEP_WAKEUP_UNDEFINED && resetReason == ESP_RST_UNKNOWN && usbConnected) {
-    return WakeupReason::AfterFlash;
-  }
-  if (wakeupCause == ESP_SLEEP_WAKEUP_UNDEFINED && resetReason == ESP_RST_POWERON && usbConnected) {
-    return WakeupReason::AfterUSBPower;
-  }
   return WakeupReason::Other;
 }
