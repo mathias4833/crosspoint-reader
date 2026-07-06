@@ -268,14 +268,18 @@ void enterDeepSleep(bool fromTimeout = false) {
        SETTINGS.quickResumeSleepScreen == CrossPointSettings::QUICK_RESUME_SLEEP_SCREEN::QUICK_RESUME_AFTER_TIMEOUT);
   APP_STATE.showBootScreen = !isQuickResumeSleep;
 
-  APP_STATE.saveToFile();
+  if (Storage.ready()) {
+    APP_STATE.saveToFile();
+  } else {
+    LOG_DBG("MAIN", "Skipping sleep state save because SD storage is not initialized");
+  }
 
   // Commit to sleeping before goToSleep() runs the outgoing activity's onExit():
   // a WiFi activity would otherwise silentRestart() here and reboot instead.
   deepSleepInProgress = true;
   activityManager.goToSleep(fromTimeout);
 
-  if (isQuickResumeSleep) {
+  if (isQuickResumeSleep && Storage.ready()) {
     saveSleepFrameBuffer();
   }
 
