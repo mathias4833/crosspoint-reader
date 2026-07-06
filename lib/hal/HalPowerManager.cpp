@@ -10,10 +10,59 @@
 
 HalPowerManager powerManager;  // Singleton instance
 
+namespace {
+
+constexpr uint8_t I2C_ADDR_MAX17048 = 0x36;
+constexpr uint8_t MAX17048_REG_SOC = 0x04;
+
+bool readMax17048Reg16(uint8_t reg, uint16_t* outValue) {
+  Wire.beginTransmission(I2C_ADDR_MAX17048);
+  Wire.write(reg);
+  if (Wire.endTransmission(false) != 0) {
+    return false;
+  }
+
+  const uint8_t bytesRead = Wire.requestFrom(I2C_ADDR_MAX17048, static_cast<uint8_t>(2), static_cast<uint8_t>(true));
+  if (bytesRead != 2) {
+    while (Wire.available()) {
+      Wire.read();
+    }
+    return false;
+  }
+
+  const uint8_t msb = Wire.read();
+  const uint8_t lsb = Wire.read();
+  *outValue = (static_cast<uint16_t>(msb) << 8) | lsb;
+  return true;
+}
+
+uint16_t max17048SocToPercent(uint16_t rawSoc) {
+  uint16_t percentage = (rawSoc + 128) / 256;  // SOC register unit is 1%/256.
+  if (percentage > 100) {
+    percentage = 100;
+  }
+  return percentage;
+}
+
+}  // namespace
+
 void HalPowerManager::begin() {
   normalFreq = getCpuFrequencyMhz();
   modeMutex = xSemaphoreCreateMutex();
   assert(modeMutex != nullptr);
+
+  uint16_t rawSoc = 0;
+  if (readMax17048Reg16(MAX17048_REG_SOC, &rawSoc)) {
+    _batteryGaugeAvailable = true;
+    _batteryCachedPercent = max17048SocToPercent(rawSoc);
+    _batteryLastPollMs = millis();
+    LOG_INF("PWR", "MAX17048 fuel gauge detected: %u%%", _batteryCachedPercent);
+  } else {
+    _batteryGaugeAvailable = false;
+    _batteryCachedPercent = 80;
+    _batteryLastPollMs = millis();
+    LOG_INF("PWR", "MAX17048 fuel gauge not detected, using fallback battery value");
+  }
 }
 
 void HalPowerManager::setPowerSaving(bool enabled) {
@@ -58,6 +107,16 @@ void HalPowerManager::startDeepSleep(HalGPIO& gpio) const {
     gpio.update();
   }
 
+  pinMode(EPD_SCLK, INPUT);
+  pinMode(EPD_MOSI, INPUT);
+  pinMode(SPI_MISO, INPUT);
+  pinMode(EPD_CS, INPUT);
+  pinMode(SD_CS, INPUT);
+  pinMode(EPD_DC, INPUT);
+  pinMode(EPD_RST, INPUT);
+  pinMode(EPD_BUSY, INPUT);
+  digitalWrite(PERIPH_EN, LOW);
+
 #ifdef ENABLE_SERIAL_LOG
   // Tear down HWCDC so the host sees a clean disconnect and the peripheral
   // doesn't hold power domains that interfere with USB-powered GPIO wake.
@@ -66,18 +125,31 @@ void HalPowerManager::startDeepSleep(HalGPIO& gpio) const {
   logSerial.end();
 #endif
 
-  pinMode(InputManager::POWER_BUTTON_PIN, INPUT_PULLUP);
-  // Arm the wakeup trigger *after* the button is released
-  // Note: this is only useful for waking up on USB power. On battery, the MCU will be completely powered off, so the
-  // power button is hard-wired to briefly provide power to the MCU, waking it up regardless of the wakeup source
-  // configuration
-  esp_deep_sleep_enable_gpio_wakeup(1ULL << InputManager::POWER_BUTTON_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
-  // Enter Deep Sleep
+  pinMode(InputManager::BUTTON_ADC_PIN_1, INPUT);
+  pinMode(InputManager::BUTTON_ADC_PIN_2, INPUT);
+  esp_sleep_enable_ext1_wakeup(InputManager::DEEP_SLEEP_WAKEUP_PIN_MASK, ESP_EXT1_WAKEUP_ANY_LOW);
   esp_deep_sleep_start();
 }
 
 uint16_t HalPowerManager::getBatteryPercentage() const {
-  return 80;
+  const unsigned long now = millis();
+  if (now - _batteryLastPollMs < BATTERY_POLL_MS) {
+    return _batteryCachedPercent;
+  }
+
+  uint16_t rawSoc = 0;
+  if (readMax17048Reg16(MAX17048_REG_SOC, &rawSoc)) {
+    _batteryGaugeAvailable = true;
+    _batteryCachedPercent = max17048SocToPercent(rawSoc);
+  } else {
+    if (_batteryGaugeAvailable) {
+      LOG_DBG("PWR", "MAX17048 read failed, keeping cached battery value");
+    }
+    _batteryGaugeAvailable = false;
+  }
+
+  _batteryLastPollMs = now;
+  return _batteryCachedPercent;
 }
 
 HalPowerManager::Lock::Lock() {

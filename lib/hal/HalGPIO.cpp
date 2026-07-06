@@ -192,13 +192,24 @@ HalGPIO::DeviceType detectDeviceTypeWithFingerprint() {
 
 void HalGPIO::begin() {
   inputMgr.begin();
-  SPI.begin(EPD_SCLK, SPI_MISO, EPD_MOSI, EPD_CS);
 
   _deviceType = DeviceType::X4;
   pinMode(PWR_OFF, OUTPUT);
   digitalWrite(PWR_OFF, LOW);
   pinMode(PERIPH_EN, OUTPUT);
-  digitalWrite(PERIPH_EN, LOW);
+  digitalWrite(PERIPH_EN, HIGH);
+  delay(5);
+
+  pinMode(EPD_CS, OUTPUT);
+  digitalWrite(EPD_CS, HIGH);
+  pinMode(SD_CS, OUTPUT);
+  digitalWrite(SD_CS, HIGH);
+
+  SPI.begin(EPD_SCLK, SPI_MISO, EPD_MOSI, EPD_CS);
+
+  Wire.begin(I2C_SDA, I2C_SCL, I2C_FREQ);
+  Wire.setTimeOut(10);
+
   pinMode(BAT_CHG_N, INPUT_PULLUP);
   pinMode(SD_DET_N, INPUT_PULLUP);
 }
@@ -232,9 +243,10 @@ void HalGPIO::startDeepSleep() {
     delay(50);
     inputMgr.update();
   }
-  // Arm the wakeup trigger *after* the button is released
-  esp_deep_sleep_enable_gpio_wakeup(1ULL << InputManager::POWER_BUTTON_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
-  // Enter Deep Sleep
+  digitalWrite(PERIPH_EN, LOW);
+  pinMode(InputManager::BUTTON_ADC_PIN_1, INPUT);
+  pinMode(InputManager::BUTTON_ADC_PIN_2, INPUT);
+  esp_sleep_enable_ext1_wakeup(InputManager::DEEP_SLEEP_WAKEUP_PIN_MASK, ESP_EXT1_WAKEUP_ANY_LOW);
   esp_deep_sleep_start();
 }
 
