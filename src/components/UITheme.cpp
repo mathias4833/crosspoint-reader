@@ -9,6 +9,7 @@
 #include "MappedInputManager.h"
 #include "RecentBooksStore.h"
 #include "components/themes/BaseTheme.h"
+#include "components/themes/customc6/CustomC6ReaderTheme.h"
 #include "components/themes/lyra/Lyra3CoversTheme.h"
 #include "components/themes/lyra/LyraTheme.h"
 #include "components/themes/roundedraff/RoundedRaffTheme.h"
@@ -46,6 +47,11 @@ void UITheme::setTheme(CrossPointSettings::UI_THEME type) {
       LOG_DBG("UI", "Using Lyra 3 Covers theme");
       currentTheme = std::make_unique<Lyra3CoversTheme>();
       currentMetrics = &Lyra3CoversMetrics::values;
+      break;
+    case CrossPointSettings::UI_THEME::CUSTOM_C6_READER:
+      LOG_DBG("UI", "Using Custom C6 Reader theme");
+      currentTheme = std::make_unique<CustomC6ReaderTheme>();
+      currentMetrics = &CustomC6ReaderMetrics::values;
       break;
   }
 }
