@@ -47,7 +47,7 @@ class HalGPIO {
   bool usbStateChanged = false;
 
  public:
-  enum class DeviceType : uint8_t { X4, X3 };
+  enum class DeviceType : uint8_t { X4, X3, CustomC6 };
 
  private:
   DeviceType _deviceType = DeviceType::X4;

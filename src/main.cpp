@@ -266,16 +266,18 @@ void enterDeepSleep(bool fromTimeout = false) {
   // it visible until the first useful reader or home paint replaces it.
   APP_STATE.showBootScreen = false;
 
-  APP_STATE.saveToFile();
+  if (Storage.ready()) {
+    APP_STATE.saveToFile();
+  }
 
   // Commit to sleeping before goToSleep() runs the outgoing activity's onExit():
   // a WiFi activity would otherwise silentRestart() here and reboot instead.
   deepSleepInProgress = true;
   activityManager.goToSleep(fromTimeout);
 
-  if (isQuickResumeSleep) {
+  if (isQuickResumeSleep && Storage.ready()) {
     saveSleepFrameBuffer();
-  } else if (Storage.exists(SLEEP_FRAME_FILE)) {
+  } else if (Storage.ready() && Storage.exists(SLEEP_FRAME_FILE)) {
     // A stale Quick Resume frame must not replace the selected sleep screen during wake.
     Storage.remove(SLEEP_FRAME_FILE);
   }
@@ -296,7 +298,7 @@ void enterDeepSleep(bool fromTimeout = false) {
 }
 
 void setupDisplayAndFonts(bool seamless = false) {
-#if !FREEINK_MCU_C3
+#if !FREEINK_MCU_C3 && !FREEINK_DEVICE_CUSTOM_C6
   // C3 resolves its controller in HalGPIO::begin() before SPI claims the
   // display pins. X4 Pro skips that C3-only path, so probe here before
   // display.begin() selects and initializes its panel driver.

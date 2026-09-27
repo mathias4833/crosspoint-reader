@@ -133,6 +133,9 @@ void HalGPIO::begin() {
     pinMode(BAT_GPIO0, INPUT);
     pinMode(UART0_RXD, INPUT);
   }
+#elif FREEINK_DEVICE_CUSTOM_C6
+  _deviceType = DeviceType::CustomC6;
+  BoardConfig::selectDevice(BoardConfig::Board::CustomC6);
 #else
   _deviceType = DeviceType::X4;
 #endif
@@ -216,7 +219,8 @@ bool HalGPIO::verifyPowerButtonWakeup() {
   // wheel click, so a click wake is always released before this samples and
   // verification would re-sleep on every wake. Its wheel has hard external
   // pull-ups, so the ghost-wake debounce this implements is not needed.
-  if (BoardConfig::isPaperMono() || BoardConfig::isM5PaperV11() || BoardConfig::ACTIVE.input.power < 0) {
+  if (BoardConfig::isCustomC6() || BoardConfig::isPaperMono() || BoardConfig::isM5PaperV11() ||
+      BoardConfig::ACTIVE.input.power < 0) {
     return true;
   }
 
