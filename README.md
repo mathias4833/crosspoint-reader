@@ -1,5 +1,19 @@
 # CrossPoint Reader
 
+This fork adds support for a [custom ESP32-C6 e-paper reader](https://github.com/mathias4833/epaper-reader-hw), based on CrossPoint Reader 1.6.0.
+
+Board support is provided by a [FreeInk SDK fork](https://github.com/mathias4833/freeink-sdk), included as a submodule.
+
+<p align="center">
+  <a href="https://github.com/mathias4833/epaper-reader-hw">
+    <img src="https://raw.githubusercontent.com/mathias4833/epaper-reader-hw/main/images/reader-reading.jpeg" width="400" alt="The custom ESP32-C6 reader displaying a book">
+  </a>
+</p>
+
+Build and flash the board with `pio run -e custom_c6 -t upload`. Firmware updates use USB; OTA updates are disabled for this board.
+
+---
+
 [![Fund contributors](https://img.shields.io/badge/%F0%9F%91%91_Fund_contributors-royalty.dev-BB953A?style=for-the-badge&labelColor=1a1a1a)](https://app.royalty.dev/crosspoint-reader/crosspoint-reader)
 
 CrossPoint is open-source e-reader firmware - community-built, fully hackable, free forever. It's maintained by a growing community of developers and readers who believe your device should do what you want - not what a manufacturer decided for you.
@@ -168,7 +182,7 @@ Conversion runs the firmware repo's `lib/EpdFont/scripts/fontconvert_sdcard.py` 
 ### Setup
 
 ```bash
-git clone --recursive https://github.com/crosspoint-reader/crosspoint-reader
+git clone --recursive https://github.com/mathias4833/crosspoint-reader
 cd crosspoint-reader
 
 # if cloned without --recursive:
